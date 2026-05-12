@@ -49,9 +49,14 @@ public class MasterController : MonoBehaviour
     [Header("現在のノッチ")]
     public NotchInfo currentNotchInfo = NotchInfo.GetNeutralNotch();
 
+    [Header("ニュートラル減速")]
+    [SerializeField]
+    private float neutralDeceleration = 0.5f;
+
     [Header("現在の速度")]
     [SerializeField, ReadOnly]
     private float currentSpeed = 0f;
+
     
     [Header("ノッチのインデックス")]
     [SerializeField, ReadOnly]
@@ -93,7 +98,14 @@ public class MasterController : MonoBehaviour
             {
                 // ブレーキノッチがある場合はブレーキノッチを1段戻す
                 brakeNotchIndex--;
-                currentNotchInfo = brakeNotches[brakeNotchIndex];
+                if(brakeNotchIndex == 0)
+                {
+                    currentNotchInfo = NotchInfo.GetNeutralNotch();
+                }
+                else
+                {
+                    currentNotchInfo = brakeNotches[brakeNotchIndex];
+                }
                 acceleratorNotchIndex = 0; // 加速ノッチは0に戻す
             }
             else
@@ -113,7 +125,14 @@ public class MasterController : MonoBehaviour
             {
                 // 加速ノッチがある場合は加速ノッチを1段戻す
                 acceleratorNotchIndex--;
-                currentNotchInfo = acceleratorNotches[acceleratorNotchIndex];
+                if(acceleratorNotchIndex == 0)
+                {
+                    currentNotchInfo = NotchInfo.GetNeutralNotch();
+                }
+                else
+                {
+                    currentNotchInfo = acceleratorNotches[acceleratorNotchIndex];
+                }
                 brakeNotchIndex = 0; // ブレーキノッチは0に戻す
             }
             else
@@ -131,13 +150,16 @@ public class MasterController : MonoBehaviour
         if (currentNotchInfo.notchType == NotchType.Powered)
         {
             Debug.Log("accelerator");
-            if (currentNotchInfo.acceleration > 0)
+            if (currentSpeed < currentNotchInfo.maxSpeed)
             {
-                currentSpeed += currentNotchInfo.acceleration * Time.deltaTime;
+                if(currentNotchInfo.acceleration > 0)
+                {
+                    currentSpeed += currentNotchInfo.acceleration * Time.deltaTime;
+                }
             }
-            if (currentNotchInfo.maxSpeed > 0)
+            else
             {
-                currentSpeed = Mathf.Clamp(currentSpeed, 0, currentNotchInfo.maxSpeed);
+                currentSpeed -= neutralDeceleration * Time.deltaTime;
             }
         }
         if (currentNotchInfo.notchType == NotchType.Braking)
@@ -148,6 +170,15 @@ public class MasterController : MonoBehaviour
                 currentSpeed -= currentNotchInfo.brakeForce * Time.deltaTime;
             }
             currentSpeed = Mathf.Max(currentSpeed, 0); // 速度は0以上にする
+        }
+        if(currentNotchInfo.notchType == NotchType.Neutral)
+        {
+            Debug.Log("neutral");
+            if (currentSpeed > 0)
+            {
+                currentSpeed -= neutralDeceleration * Time.deltaTime;
+                currentSpeed = Mathf.Max(currentSpeed, 0); // 速度は0以上にする
+            }
         }
 
         pathMovement.currentRoutePosition += currentSpeed * Time.deltaTime;
